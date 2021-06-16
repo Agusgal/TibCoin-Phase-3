@@ -6,7 +6,7 @@
 class NodeSPV : public Node
 {
 public:
-	NodeSPV(boost::asio::io_context&, const std::string&, const unsigned int, const unsigned int);
+	NodeSPV(boost::asio::io_context&, const std::string&, const unsigned int, const unsigned int, GuiInfo(gui));
 	~NodeSPV();
 
 	virtual void transaction(const unsigned int, const std::string& wallet, const unsigned int amount);
@@ -18,6 +18,8 @@ public:
 
 	virtual void getBlocks(const unsigned int, const std::string& blockID, const unsigned int count) {};
 	virtual void getBlockHeaders(const unsigned int, const std::string& blockID, const unsigned int count);
+
+	virtual const std::string getKey(void);
 
 	virtual std::vector<Actions> getActions(void);
 

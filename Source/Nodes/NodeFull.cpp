@@ -17,9 +17,11 @@ const json error = {"error"};
 
 //Constructor inherits from Node ----> if you want to run this project you need to configure path below (it doesnt work for us for some reason without absolute paths)
 NodeFull::NodeFull(boost::asio::io_context& io_context, const std::string& ip,
-	const unsigned int port, const unsigned int identifier)
-	: Node(io_context, ip, port, identifier), blockChain("C:\\Users\\Agus\\source\\repos\\TiBCoin Phase 2\\Resources\\sample0.json")
+	const unsigned int port, const unsigned int identifier, const GuiInfo& guiMsg)
+	: Node(io_context, ip, port, identifier, guiMsg)
 {
+	//full node has no key
+	this->publicKey = "";
 }
 
 
@@ -38,13 +40,13 @@ void NodeFull::getBlocks(const unsigned int id, const std::string& blockID, cons
 
 
 //Post block request
-void NodeFull::postBlock(const unsigned int id, const std::string& blockID) 
+void NodeFull::postBlock(const unsigned int id, const unsigned int index) 
 {
 	if (clientState == ConnectionState::FREE && !client) 
 	{
 		if (neighbors.find(id) != neighbors.end()) 
 		{
-			client = new BlockClient(neighbors[id].ip, port + 1, neighbors[id].port, blockChain.getBlock(0)/*getBlock(blockID)*/);
+			client = new BlockClient(neighbors[id].ip, port + 1, neighbors[id].port, blockChain.getBlock(index));
 			clientState = ConnectionState::PERFORMING;
 		}
 	}
@@ -279,4 +281,107 @@ std::vector <Actions> NodeFull::getActions(void)
 	actionvector.push_back(Actions(ActionType::SR, "Get Blocks"));
 
 	return actionvector;
+}
+
+bool NodeFull::validateTransaction(const json& transaction, bool checked)
+{
+	bool result = false;
+
+	std::map<std::string, int> usedIds;
+
+	/*Checks if it's a new transaction or an old one*/
+	if (transaction.find("vin") != transaction.end()) 
+	{
+		result = true;
+
+		int totout = 0;
+
+		//print("Validating vins.");
+		for (const auto& input: transaction["vin"]) 
+		{
+			if (usedIds.find(input["txid"]) != usedIds.end() && usedIds[input["txid"]] == input["outputIndex"]) 
+			{
+				result = false;
+			}
+			else 
+			{
+				usedIds[input["txid"]] = input["outputIndex"];
+			}
+		}
+
+		if (!checked) 
+		{
+			//print("Adding outputs");
+			for (const auto& output: transaction["vout"]) 
+			{
+				totout += output["amount"];
+			}
+
+			int totin = 0;
+
+			//print("Adding inputs");
+			for (const auto& utxo: usedIds) 
+			{
+				if (UTXOs.find(utxo.first) == UTXOs.end()) 
+				{
+					result = false;
+				}
+				else if ((UTXOs[utxo.first]["vout"].size() > utxo.second) && !UTXOs[utxo.first]["vout"][utxo.second].is_null()) 
+				{
+					totin += UTXOs[utxo.first]["vout"][utxo.second]["amount"];
+					//UTXOs[utxo.first]["vout"].erase(utxo.second);
+				}
+			}
+
+			if (totin != totout) 
+			{
+				std::string ttttfuckingtttetosofuckingtt = transaction.dump();
+				result = false;
+			}
+		}
+	}
+
+	if (!result)
+	{
+		guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a transaction.");
+	}
+
+	return result;
+}
+
+
+bool NodeFull::validateBlock(const json& block)
+{
+	int blockCount = blockChain.getBlockQuantity();
+
+	bool doneMiner = false;
+	bool result = false;
+
+	if ((blockCount && blockChain.getBlock(blockCount - 1)["blockid"] != block["blockid"]) || !blockCount) 
+	{
+		if (BlockChain::calculateMRoot(block) == block["merkleroot"]
+
+			&& BlockChain::calculateBlockID(block) == block["blockid"]) {
+			result = true;
+			std::string bl = block.dump();
+			for (auto& trans : block["tx"]) {
+				if (trans["vin"].is_null() && !doneMiner) {
+					doneMiner = true;
+				}
+				else {
+					if (!validateTransaction(trans, true))
+						result = false;
+				}
+			}
+		}
+		else
+			guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a block.");
+	}
+
+	return result;
+}
+
+const std::string NodeFull::getKey(void)
+{
+	return publicKey;
 }

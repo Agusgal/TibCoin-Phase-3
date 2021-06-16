@@ -1,9 +1,9 @@
 #include <iostream>
-#include "App/App.h"
+//#include "App/App.h"
 
 //#define DEMO
-#define APP
-
+//#define APP
+#define TEST
 
 #ifdef APP
 int main()
@@ -27,7 +27,97 @@ int main()
 }
 #endif //APP
 
+#ifdef TEST
 
+
+#include <cryptopp/sha.h>
+#include <cryptopp/cryptlib.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/files.h>
+#include <cryptopp/channels.h>
+
+
+#include <iostream>
+
+
+std::string hash(std::string msg);
+bool check(std::string msg);
+
+
+int main()
+{
+	bool completed = false;
+
+	std::string msg = "this is giberish!";
+
+	int count = 0;
+
+	while (!completed)
+	{
+		msg.append(std::to_string(count));
+		if (check(hash(msg)))
+		{
+			completed = true;
+		}
+		std::cout << count << std::endl;
+		count++;
+		
+		if (count == 65536)
+		{
+			completed = true;
+		}
+	}
+
+	return 0;
+}
+
+std::string hash(std::string msg)
+{
+	std::string s1;
+
+	CryptoPP::SHA256 sha256;
+
+
+	CryptoPP::HashFilter f1(sha256, new CryptoPP::HexEncoder(new CryptoPP::StringSink(s1)));
+
+	CryptoPP::ChannelSwitch cs;
+	cs.AddDefaultRoute(f1);
+
+	CryptoPP::StringSource ss(msg, true /*pumpAll*/, new CryptoPP::Redirector(cs));
+
+
+	//std::cout << "Message: " << msg << std::endl;
+	std::cout << "SHA-256: " << s1 << std::endl;
+
+	return s1;
+}
+
+bool check(std::string msg)
+{
+	int ceroCount = 0;
+	for (int i = 0; i < msg.size() && msg[i] == '0'; i++)
+	{
+		ceroCount++;
+	}
+	
+	if (ceroCount >= 2)
+	{
+		std::cout << "this one is odd!\n\n\n\n\n" << std::endl;
+	}
+
+
+	if (ceroCount >= 5)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
+#endif //TEST
 
 
 

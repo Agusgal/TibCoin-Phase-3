@@ -9,8 +9,11 @@ namespace
 
 //Constructor inherits from Node
 NodeSPV::NodeSPV(boost::asio::io_context& io_context, const std::string& ip,
-	const unsigned int port, const unsigned int identifier) : Node(io_context, ip, port, identifier)
+	const unsigned int port, const unsigned int identifier, const GuiInfo guiMsg): 
+	Node(io_context, ip, port, identifier, guiMsg)
 {
+	//SPV node has a key
+	this->publicKey = to_string(rand() % 99999999);
 }
 
 //Callback server get
@@ -147,4 +150,10 @@ std::vector<Actions> NodeSPV::getActions(void)
 	actionvector.push_back(Actions(ActionType::S, "Get Block headers"));
 
 	return actionvector;
+}
+
+
+const std::string NodeSPV::getKey(void)
+{
+	return publicKey;
 }

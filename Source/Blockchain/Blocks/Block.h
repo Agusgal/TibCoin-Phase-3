@@ -19,7 +19,8 @@ const enum class BlockInfo
 using namespace std;
 using json = nlohmann::json;
 
-class BlockMicho {
+class BlockMicho 
+{
 public:
 	
 	BlockMicho(const json& block);
@@ -35,19 +36,13 @@ private:
 	const string getData(const BlockInfo& data);
 	std::string printTree(void);
 
-	unsigned int ntx;
-	unsigned int height;
-	unsigned int nonce;
-	string blockid;
-	string previousBlockId;
-	string merkleRoot;
 
 	std::list<std::string> nodes, ids;
 	void parseIds(void);
 
 
-	/*"""Hashing"""*/
-	static unsigned int generateID(unsigned char* str);
+	/*Hashing*/
+	static std::string generateID(const string&);
 	inline static const std::string hex2ASCII(unsigned int);
 	inline static const std::string hash(const std::string&);
 
@@ -62,8 +57,6 @@ private:
 	string calculatedMerkleRoot;
 	string isValidMR;
 	bool validated;
-
-	
 };
 
 

@@ -14,6 +14,13 @@ public:
 	void loadBlockChain(const string& filename);
 	const string drawTree(unsigned int id);
 	void addBlock(const json&);
+	static const std::string calculateMRoot(const json& newBlock);
+
+	static const std::string generateID(const std::string& block);
+
+	static const std::string calculateBlockID(const json&);
+
+	static const std::string calculateTXID(const json&);
 
 	//getters
 	const string getBlockInfo(int id, const BlockInfo&);

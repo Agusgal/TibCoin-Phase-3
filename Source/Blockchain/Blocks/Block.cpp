@@ -1,6 +1,13 @@
 #include "Block.h"
 #include <string>
 
+#include <cryptopp/sha.h>
+#include <cryptopp/cryptlib.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/files.h>
+#include <cryptopp/channels.h>
+
+#include <iostream>
 
 using namespace std;
 
@@ -22,21 +29,9 @@ BlockMicho::BlockMicho(const json& block)
 	header["nonce"] = to_string(header["nonce"].get<unsigned int>());
 	header["nTx"] = to_string(header["nTx"].get<unsigned int>());
 
-
 	this->validated = false;
 
-	//Deprecated
-	ntx = block["nTx"].get<unsigned int>();
-	height = block["height"].get<unsigned int>();
-	nonce = block["nonce"].get<unsigned int>();
-	blockid = block["blockid"].get<string>();
-	previousBlockId = block["previousblockid"].get<string>();
-	merkleRoot = block["merkleroot"].get<string>();
-
 	auto transactions = block["tx"];
-
-	
-
 }
 
 
@@ -49,10 +44,11 @@ inline const string BlockMicho::hex2ASCII(unsigned int n)
 	return res;
 }
 
-/*"""""Hashes""""""*/
+/*Hashes*/
 inline const string BlockMicho::hash(const string& code)
 {
-	return hex2ASCII(generateID((unsigned char*)code.c_str()));
+	return generateID(code);
+	//return hex2ASCII(generateID(code));
 }
 
 /*PArses from json to ids and nodes*/
@@ -194,17 +190,24 @@ std::string BlockMicho::printTree(void)
 }
 
 
-
-
-
-
-unsigned int BlockMicho::generateID(unsigned char* str)
+/*Generates ID with sha256*/
+std::string BlockMicho::generateID(const std::string &code)
 {
-	unsigned int ID = 0;
-	int c;
-	while (c = *str++)
-		ID = c + (ID << 6) + (ID << 16) - ID;
-	return ID;
+	std::string s1;
+
+	CryptoPP::SHA256 sha256;
+
+	CryptoPP::HashFilter f1(sha256, new CryptoPP::HexEncoder(new CryptoPP::StringSink(s1)));
+
+	CryptoPP::ChannelSwitch cs;
+	cs.AddDefaultRoute(f1);
+
+	CryptoPP::StringSource ss(code, true /*pumpAll*/, new CryptoPP::Redirector(cs));
+
+	std::cout << "Message: " << code << std::endl;
+	std::cout << "SHA-256: " << s1 << std::endl;
+	
+	return s1;
 }
 
 

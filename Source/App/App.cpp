@@ -162,19 +162,35 @@ void App::updateGuiBlockData()
 
 void App::parseNodeData(void)
 {
+	bool createdNodeisFull = false;
+
 	for (const auto& node : gui->getNodes()) 
 	{
 		/*Creates new node.*/
 		if (node.type == NodeTypes::NEW_FULL)
-			nodes.push_back(new NodeFull(io_context, node.ip, node.port, node.index));
+		{
+			nodes.push_back(new NodeFull(io_context, node.ip, node.port, node.index, GuiInfo(gui)));
+			createdNodeisFull = true;
+		}
 		else
-			nodes.push_back(new NodeSPV(io_context, node.ip, node.port, node.index));
+		{
+			nodes.push_back(new NodeSPV(io_context, node.ip, node.port, node.index, GuiInfo(gui)));
+			createdNodeisFull = false;
+		}
 
 		/*Sets neighbors.*/
-		for (const auto& neighbor : node.neighbors) 
+		for (const auto& neighbor: node.neighbors) 
 		{
 			auto& ngh = gui->getNode(neighbor);
-			nodes.back()->newNeighbor(ngh.index, ngh.ip, ngh.port);
+			//if full public key has to be empty string, if spv then random
+			
+
+			nodes.back()->newNeighbor(ngh.index, ngh.ip, ngh.port, nodes.back()->getKey());
+
+			/*if (createdNodeisFull)
+			{
+				nodes.back()->newNeighbor(ngh.index, ngh.ip, ngh.port, nodes.back()->getKey());
+			}*/
 		}
 	}
 }

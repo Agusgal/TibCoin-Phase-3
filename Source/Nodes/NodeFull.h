@@ -4,12 +4,12 @@
 
 class NodeFull : public Node {
 public:
-	NodeFull(boost::asio::io_context&, const std::string&, const unsigned int, const unsigned int);
+	NodeFull(boost::asio::io_context&, const std::string&, const unsigned int, const unsigned int, const GuiInfo&);
 	~NodeFull();
 
 	virtual void transaction(const unsigned int, const std::string& wallet, const unsigned int amount);
 
-	virtual void postBlock(const unsigned int, const std::string& blockID);
+	virtual void postBlock(const unsigned int, const unsigned int index);
 	virtual void postMerkleBlock(const unsigned int, const std::string& blockID, const std::string& transID);
 
 	virtual void postFilter(const unsigned int, const std::string& key) {};
@@ -17,11 +17,13 @@ public:
 	virtual void getBlocks(const unsigned int, const std::string& blockID, const unsigned int count);
 	virtual void getBlockHeaders(const unsigned int, const std::string& blockID, const unsigned int count) {};
 
+	virtual const std::string getKey(void);
+
 	virtual std::vector <Actions> getActions(void);
 
 	virtual void perform();
 
-private:
+protected:
 	const json getMerkleBlock(const std::string&, const std::string&);
 	const json& getBlock(const std::string& blockID);
 
@@ -30,4 +32,8 @@ private:
 	
 	//Full node has the whole blockchain
 	BlockChain blockChain;
+	json transactions;
+
+	bool validateTransaction(const json&, bool);
+	bool validateBlock(const json&);
 };

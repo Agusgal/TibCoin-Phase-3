@@ -3,15 +3,19 @@
 using namespace std;
 
 
-Node::Node(boost::asio::io_context& io_context, const std::string& ip, const unsigned int port, const unsigned int id)
+Node::Node(boost::asio::io_context& io_context, const std::string& ip, const unsigned int port, const unsigned int id, const GuiInfo& guiMsg)
 	: ip(ip), server(nullptr), client(nullptr), clientState(ConnectionState::FREE), serverState(ConnectionState::FREE),
-	port(port), id(id), connectedClientId(-1) 
+	port(port), id(id), connectedClientId(-1), guiMsg(guiMsg)
 {
 	server = new Server(io_context,
-		std::bind(&Node::getResponse, this, std::placeholders::_1, std::placeholders::_2),
-		std::bind(&Node::postResponse, this, std::placeholders::_1, std::placeholders::_2),
+		std::bind(&Node::getResponse, this, placeholders::_1, placeholders::_2),
+		std::bind(&Node::postResponse, this, placeholders::_1, placeholders::_2),
 		std::bind(&Node::errorResponse, this),
 		port);
+
+	//set publicKey
+	//this->publicKey = to_string(rand() % 99999999);
+	std::cout << "Node: " << id << ", key: " << publicKey << std::endl;
 };
 
 
@@ -30,9 +34,21 @@ Node::~Node()
 }
 
 
-void Node::newNeighbor(const unsigned int id, const std::string& ip, const unsigned int port) 
+void Node::newNeighbor(const unsigned int id, const std::string& ip, const unsigned int port, const std::string& publicKey)
 {
-	neighbors[id] = { ip, port };
+	bool addNeighbor = true;
+	for (auto& neighbor : neighbors) 
+	{
+		if (neighbor.second.ip == ip && neighbor.second.port == port)
+		{
+			addNeighbor = false;
+		}
+	}
+	
+	if (addNeighbor)
+	{
+		neighbors[id] = { ip,publicKey, port };
+	}
 }
 
 
@@ -78,6 +94,7 @@ const unsigned int Node::getId()
 	return id; 
 }
 
+//Check if necessary
 ConnectionState Node::getClientState(void) 
 {
 	if (clientState == ConnectionState::FINISHED) 
@@ -92,7 +109,7 @@ ConnectionState Node::getClientState(void)
 
 }
 
-
+//Check if necessary
 ConnectionState Node::getServerState(void) 
 {
 	switch (serverState) 
@@ -111,6 +128,7 @@ ConnectionState Node::getServerState(void)
 	}
 }
 
+//Check if necessary
 int Node::getClientPort(void) 
 {
 	int temp = connectedClientId;
