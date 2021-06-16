@@ -211,10 +211,13 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 {
 	setConnectedClientID(nodeInfo);
 
+
+	guiMsg.setMsg("Node " + std::to_string(id) + " is answering a request from " + std::to_string(connectedClientId));
+
 	serverState = ConnectionState::FAILED;
 
 	json result;
-	result["status"] = true;
+	result["status"] = false;
 	result["result"] = NULL;
 
 	if (request.find(BLOCKPOST) != std::string::npos) 
@@ -222,22 +225,70 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 		int content = request.find("Content-Type");
 		int data = request.find("Data=");
 
-		if (content == std::string::npos || data == std::string::npos)
+		if (content != std::string::npos && data != std::string::npos)
 		{
-			result["status"] = false;
+			json blockData = json::parse(request.substr(data + 5, content - data - 5));
+			if (validateBlock(blockData))
+			{
+				blockChain.addBlock(blockData);
+			}
+			/*TODO*/
+			//Something to do with transactions
+
+
+			//set status true
+			result["status"] = true;
+			
+			
+			//Something to do with utxo
+
+
+
+			//Clean transaction queue because block is already mined
+			transactions = json();
 		}
-		else 
-		{
-			blockChain.addBlock(json::parse(request.substr(data + 5, content - data - 5)));
-			serverState = ConnectionState::OK;
-		}
+		serverState = ConnectionState::OK;
 	}
 	else if (request.find(TRANSPOST) != std::string::npos) 
 	{
+		//Got a transaction
+		int content = request.find("Content-Type");
+		int data = request.find("Data=");
+		json trans;
+
+		if (content != std::string::npos && data != std::string::npos)
+		{
+			trans = json::parse(request.substr(data + 5, content - data - 5));
+			if (UTXOs.find(trans["txid"]) == UTXOs.end())
+			{
+				if (validateTransaction(trans, false))
+				{
+					//Send to its neighbors Todo
+
+
+					updateUTXOs(trans);
+				}
+				result["status"] = true;
+			}
+		}
 		serverState = ConnectionState::OK;
 	}
 	else if (request.find(FILTERPOST) != std::string::npos) 
 	{
+		int content = request.find("Content-Type");
+		int data = request.find("Data=");
+		
+		if (content != std::string::npos && data != std::string::npos) 
+		{
+			for (auto& neighbor : neighbors) 
+			{
+				if (neighbor.second.ip == nodeInfo.address().to_string() && neighbor.second.port == (nodeInfo.port() - 1)) 
+				{
+					neighbor.second.filter = request.substr(data + 5, content - data - 5);
+					result["status"] = true;
+				}
+			}
+		}
 		serverState = ConnectionState::OK;
 	}
 
@@ -359,23 +410,29 @@ bool NodeFull::validateBlock(const json& block)
 
 	if ((blockCount && blockChain.getBlock(blockCount - 1)["blockid"] != block["blockid"]) || !blockCount) 
 	{
-		if (BlockChain::calculateMRoot(block) == block["merkleroot"]
-
-			&& BlockChain::calculateBlockID(block) == block["blockid"]) {
+		if (BlockChain::calculateMRoot(block) == block["merkleroot"] && BlockChain::calculateBlockID(block) == block["blockid"]) 
+		{
 			result = true;
 			std::string bl = block.dump();
-			for (auto& trans : block["tx"]) {
-				if (trans["vin"].is_null() && !doneMiner) {
+			for (auto& trans : block["tx"]) 
+			{
+				if (trans["vin"].is_null() && !doneMiner) 
+				{
 					doneMiner = true;
 				}
-				else {
+				else
+				{
 					if (!validateTransaction(trans, true))
+					{
 						result = false;
+					}
 				}
 			}
 		}
 		else
+		{
 			guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a block.");
+		}
 	}
 
 	return result;
@@ -384,4 +441,24 @@ bool NodeFull::validateBlock(const json& block)
 const std::string NodeFull::getKey(void)
 {
 	return publicKey;
+}
+
+
+
+void NodeFull::updateUTXOs(const json& trans) 
+{
+	for (const auto& input : trans["vin"]) 
+	{
+		if (UTXOs.find(input["txid"]) != UTXOs.end()) 
+		{
+			std::string inp = input.dump();
+			if (UTXOs[input["txid"]]["vout"].size() > input["outputIndex"].get<int>()) 
+			{
+				UTXOs[input["txid"]]["vout"][input["outputIndex"].get<int>()] = json();
+			}
+		}
+	}
+
+	transactions.push_back(trans["txid"]);
+	UTXOs[trans["txid"]] = trans;
 }

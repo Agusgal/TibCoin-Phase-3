@@ -36,4 +36,5 @@ protected:
 
 	bool validateTransaction(const json&, bool);
 	bool validateBlock(const json&);
+	void updateUTXOs(const json&);
 };

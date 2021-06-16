@@ -93,6 +93,7 @@ void NodeMiner::mine(bool real)
 			if (!neighbor.second.filter.length()) 
 			{
 				NodeFull::postBlock(neighbor.first, blockChain.getBlockQuantity() - 1);
+				NodeFull::perform();
 			}
 		}
 	}
