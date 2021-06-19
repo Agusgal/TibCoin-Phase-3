@@ -5,7 +5,7 @@
 
 const double timeElapsed = 15.0;
 const double minerFee = 10;
-const unsigned int zeroCount = 4;
+const unsigned int zeroCount = 3;
 
 NodeMiner::NodeMiner(boost::asio::io_context& io_context, const std::string& ip, const unsigned int port,
 	const unsigned int identifier, const GuiInfo guiMsg)
@@ -38,6 +38,8 @@ void NodeMiner::perform()
 	//	delete clients.front();
 	//	clients.pop_front();
 	//}
+
+	NodeFull::perform();
 }
 
 void NodeMiner::mine(bool real) 
@@ -45,7 +47,7 @@ void NodeMiner::mine(bool real)
 	json block;
 
 	//might change
-	guiMsg.setMsg("Node " + std::to_string(id) + " is mining a block.");
+	//guiMsg.setMsg("Node " + std::to_string(id) + " is mining a block.");
 
 	for (const auto& trans: transactions) 
 	{
@@ -80,6 +82,8 @@ void NodeMiner::mine(bool real)
 
 	if (completed) 
 	{
+		guiMsg.setMsg("Node " + std::to_string(id) + " has mined a block.\n");
+		
 		//add block to blockchain
 		blockChain.addBlock(block);
 
@@ -93,7 +97,6 @@ void NodeMiner::mine(bool real)
 			if (!neighbor.second.filter.length()) 
 			{
 				NodeFull::postBlock(neighbor.first, blockChain.getBlockQuantity() - 1);
-				NodeFull::perform();
 			}
 		}
 	}

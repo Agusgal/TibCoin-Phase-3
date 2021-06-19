@@ -204,8 +204,8 @@ std::string BlockMicho::generateID(const std::string &code)
 
 	CryptoPP::StringSource ss(code, true /*pumpAll*/, new CryptoPP::Redirector(cs));
 
-	std::cout << "Message: " << code << std::endl;
-	std::cout << "SHA-256: " << s1 << std::endl;
+	//std::cout << "Message: " << code << std::endl;
+	//std::cout << "SHA-256: " << s1 << std::endl;
 	
 	return s1;
 }

@@ -212,7 +212,7 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 	setConnectedClientID(nodeInfo);
 
 
-	guiMsg.setMsg("Node " + std::to_string(id) + " is answering a request from " + std::to_string(connectedClientId));
+	guiMsg.setMsg("Node " + std::to_string(id) + " is answering a request from " + std::to_string(connectedClientId) + "\n");
 
 	serverState = ConnectionState::FAILED;
 
@@ -324,12 +324,14 @@ std::vector <Actions> NodeFull::getActions(void)
 {
 	std::vector<Actions> actionvector;
 
-	actionvector.push_back(Actions(ActionType::SR, "Post Block"));
+	//actionvector.push_back(Actions(ActionType::SR, "Post Block"));
 	actionvector.push_back(Actions(ActionType::SR, "Post Transaction"));
-	actionvector.push_back(Actions(ActionType::S, "Post merkleblock"));
-	actionvector.push_back(Actions(ActionType::R, "Post Filter"));
-	actionvector.push_back(Actions(ActionType::R, "Get Block headers"));
-	actionvector.push_back(Actions(ActionType::SR, "Get Blocks"));
+	//actionvector.push_back(Actions(ActionType::S, "Post merkleblock"));
+	//actionvector.push_back(Actions(ActionType::R, "Post Filter"));
+	//actionvector.push_back(Actions(ActionType::R, "Get Block headers"));
+	//actionvector.push_back(Actions(ActionType::SR, "Get Blocks"));
+	actionvector.push_back(Actions(ActionType::SR, "Post fake transaction"));
+	actionvector.push_back(Actions(ActionType::SR, "Post fake block"));
 
 	return actionvector;
 }
@@ -394,7 +396,7 @@ bool NodeFull::validateTransaction(const json& transaction, bool checked)
 
 	if (!result)
 	{
-		guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a transaction.");
+		guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a transaction.\n");
 	}
 
 	return result;
@@ -431,7 +433,7 @@ bool NodeFull::validateBlock(const json& block)
 		}
 		else
 		{
-			guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a block.");
+			guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a block.\n");
 		}
 	}
 

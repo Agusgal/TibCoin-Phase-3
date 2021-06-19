@@ -1,6 +1,7 @@
 #include "App.h"
 #include "../Nodes/NodeFull.h"
 #include "../Nodes/NodeSPV.h"
+#include "../Nodes/NodeMiner.h"
 
 //App Constructor
 App::App(void) : running(true)
@@ -73,11 +74,17 @@ void App::dispatcher(const Events& event)
 		gui->ReceivedInfo();
 		break;
 	case Events::POST_BLOCK_EV:
-		nodes[getIndex()]->postBlock(gui->getReceiverID(),"84CB2573");
+		//nodes[getIndex()]->postBlock(gui->getReceiverID(),"84CB2573");
 		gui->ReceivedInfo();
 		break;
 	case Events::TRANSACTION_EV:
 		nodes[getIndex()]->transaction(gui->getReceiverID(), gui->getWallet(), gui->getAmount());
+		gui->ReceivedInfo();
+		break;
+	case Events::FAKE_BLOCK_EV:
+		gui->ReceivedInfo();
+		break;
+	case Events::FAKE_TRANS_EV:
 		gui->ReceivedInfo();
 		break;
 	default:
@@ -140,7 +147,6 @@ void App::performCom(void)
 }
 
 
-
 bool App::isRunning(void) 
 {
 	return running; 
@@ -162,20 +168,21 @@ void App::updateGuiBlockData()
 
 void App::parseNodeData(void)
 {
-	bool createdNodeisFull = false;
-
+	
 	for (const auto& node : gui->getNodes()) 
 	{
 		/*Creates new node.*/
 		if (node.type == NodeTypes::NEW_FULL)
 		{
 			nodes.push_back(new NodeFull(io_context, node.ip, node.port, node.index, GuiInfo(gui)));
-			createdNodeisFull = true;
+		}
+		else if(node.type == NodeTypes::NEW_SVP)
+		{
+			nodes.push_back(new NodeSPV(io_context, node.ip, node.port, node.index, GuiInfo(gui)));
 		}
 		else
 		{
-			nodes.push_back(new NodeSPV(io_context, node.ip, node.port, node.index, GuiInfo(gui)));
-			createdNodeisFull = false;
+			nodes.push_back(new NodeMiner(io_context, node.ip, node.port, node.index, GuiInfo(gui)));
 		}
 
 		/*Sets neighbors.*/
@@ -186,11 +193,6 @@ void App::parseNodeData(void)
 			
 
 			nodes.back()->newNeighbor(ngh.index, ngh.ip, ngh.port, nodes.back()->getKey());
-
-			/*if (createdNodeisFull)
-			{
-				nodes.back()->newNeighbor(ngh.index, ngh.ip, ngh.port, nodes.back()->getKey());
-			}*/
 		}
 	}
 }

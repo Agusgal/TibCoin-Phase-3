@@ -107,6 +107,7 @@ void Gui::initialImGuiSetup(void) const
 Manages allegro events in that regard.*/
 /*Return true if user exits, false otehrwise.*/
 bool Gui::windowEvents(void)
+
 {
 	bool result = false;
 
@@ -158,6 +159,9 @@ const Events Gui::checkForEvent(void)
 		case Mode::TWO:
 			phaseTwoMode(out);
 			break;
+		case Mode::THREE:
+			phaseThreeMode(out);
+			break;
 		default:
 			break;
 		}
@@ -187,6 +191,10 @@ void Gui::modeSelector(void)
 	else if (ImGui::Button("Phase Two Mode"))
 	{
 		mode = Mode::TWO;
+	}
+	else if (ImGui::Button("Phase Three Mode"))
+	{
+		mode = Mode::THREE;
 	}
 }
 
@@ -299,6 +307,19 @@ void Gui::phaseTwoMode(Events& out)
 }
 
 
+void Gui::phaseThreeMode(Events& out)
+{
+	if (state == States::INIT)
+	{
+		nodeInitialization(out);
+	}
+	else if (state == States::INIT_DONE)
+	{
+		nodeActions(out);
+	}
+}
+
+
 void Gui::nodeInitialization(Events& out)
 {
 	ImGui::Text("Enter IP:   ", ImGuiInputTextFlags_CharsDecimal); ImGui::SameLine();
@@ -310,6 +331,7 @@ void Gui::nodeInitialization(Events& out)
 
 	ImGui::RadioButton("Full", &nodeType, 0); ImGui::SameLine();
 	ImGui::RadioButton("SPV", &nodeType, 1);
+	ImGui::RadioButton("Miner", &nodeType, 2);
 
 
 
@@ -332,9 +354,13 @@ void Gui::nodeInitialization(Events& out)
 			{
 				type = "Full";
 			}
-			else
+			else if (nodes[n].type == NodeTypes::NEW_SVP)
 			{
 				type = "SPV";
+			}
+			else
+			{
+				type = "MINER";
 			}
 
 			std::string nIp = nodes[n].ip;
@@ -398,9 +424,13 @@ void Gui::nodeActions(Events& out)
 			{
 				type = "Full";
 			}
-			else
+			else if (nodes[n].type == NodeTypes::NEW_SVP)
 			{
 				type = "SPV";
+			}
+			else
+			{
+				type = "Miner";
 			}
 			
 			std::string nIp = nodes[n].ip;
@@ -428,7 +458,6 @@ void Gui::nodeActions(Events& out)
 	if (ImGui::Button("Select Sender Node", ImVec2(150, 40)))
 	{
 		out = Events::SENDERNODE_SELECTED_EV;
-
 	}
 
 	
@@ -441,9 +470,13 @@ void Gui::nodeActions(Events& out)
 			{
 				type = "Full";
 			}
-			else
+			else if (receiverNodes[n].type == NodeTypes::NEW_SVP)
 			{
 				type = "SPV";
+			}
+			else
+			{
+				type = "Miner";
 			}
 
 			std::string nIp = receiverNodes[n].ip;
@@ -491,7 +524,6 @@ void Gui::nodeActions(Events& out)
 			if (ImGui::Selectable(availableActions[n].description.c_str(), is_selected)) 
 			{
 				selectedActionId = n;
-				//if availableActions == showtranfermenu = true; 
 			}
 
 			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
@@ -521,30 +553,17 @@ void Gui::nodeActions(Events& out)
 
 	if (ImGui::Button("Execute Action", ImVec2(150, 40)))
 	{
-		
-		if (availableActions[selectedActionId].description == "Post Block")
-		{
-			out = Events::POST_BLOCK_EV;
-		}
-		else if (availableActions[selectedActionId].description == "Post Transaction")
+		if (availableActions[selectedActionId].description == "Post Transaction")
 		{
 			out = Events::TRANSACTION_EV;
 		}
-		else if (availableActions[selectedActionId].description == "Post merkleblock")
+		else if (availableActions[selectedActionId].description == "Post fake transaction")
 		{
-			out = Events::MERKLEBLOCK_EV;
+			out = Events::FAKE_TRANS_EV;
 		}
-		else if (availableActions[selectedActionId].description == "Post Filter")
+		else if (availableActions[selectedActionId].description == "Post fake block")
 		{
-			out = Events::FILTER_EV;
-		}
-		else if (availableActions[selectedActionId].description == "Get Block headers")
-		{
-			out = Events::GET_HEADERS_EV;
-		}
-		else if (availableActions[selectedActionId].description == "Get Blocks")
-		{
-			out = Events::GET_BLOCKS_EV;
+			out = Events::FAKE_BLOCK_EV	;
 		}
 	}
 
@@ -741,9 +760,13 @@ void Gui::createNewNode()
 	{
 		nodes.push_back(NewNode(NodeTypes::NEW_FULL, nodes.size(), this->ip, this->port));
 	}
-	else
+	else if (this->nodeType == 1)
 	{
 		nodes.push_back(NewNode(NodeTypes::NEW_SVP, nodes.size(), this->ip, this->port));
+	}
+	else
+	{
+		nodes.push_back(NewNode(NodeTypes::NEW_MINER, nodes.size(), this->ip, this->port));
 	}
 }
 

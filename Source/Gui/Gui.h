@@ -23,7 +23,9 @@ const enum class Events:int
 	GET_BLOCKS_EV,
 	GET_HEADERS_EV,
 	TRANSACTION_EV,
-	POST_BLOCK_EV
+	POST_BLOCK_EV,
+	FAKE_BLOCK_EV,
+	FAKE_TRANS_EV
 };
 
 
@@ -51,13 +53,15 @@ const enum class Mode
 {
 	NONE = 0,
 	ONE,
-	TWO
+	TWO,
+	THREE
 };
 
 /*Some Node types*/
 const enum class NodeTypes {
 	NEW_SVP,
 	NEW_FULL,
+	NEW_MINER
 };
 
 
@@ -125,6 +129,7 @@ private:
 	void modeSelector(void);
 	void phaseOneMode(Events &out);
 	void phaseTwoMode(Events &out);
+	void phaseThreeMode(Events& out);
 
 
 	/*Window displayers.*/

@@ -6,12 +6,12 @@
 class NodeSPV : public Node
 {
 public:
-	NodeSPV(boost::asio::io_context&, const std::string&, const unsigned int, const unsigned int, GuiInfo(gui));
+	NodeSPV(boost::asio::io_context&, const std::string&, const unsigned int port, const unsigned int id, const GuiInfo(gui));
 	~NodeSPV();
 
 	virtual void transaction(const unsigned int, const std::string& wallet, const unsigned int amount);
 
-	virtual void postBlock(const unsigned int, const std::string& blockID) {};
+	virtual void postBlock(const unsigned int, const unsigned int) {};
 	virtual void postMerkleBlock(const unsigned int, const std::string& blockID, const std::string& transID) {};
 
 	virtual void postFilter(const unsigned int, const std::string& key);

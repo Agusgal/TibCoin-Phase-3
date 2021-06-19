@@ -9,8 +9,8 @@ namespace
 
 //Constructor inherits from Node
 NodeSPV::NodeSPV(boost::asio::io_context& io_context, const std::string& ip,
-	const unsigned int port, const unsigned int identifier, const GuiInfo guiMsg): 
-	Node(io_context, ip, port, identifier, guiMsg)
+	const unsigned int port, const unsigned int id, const GuiInfo guiMsg): 
+	Node(io_context, ip, port, id, guiMsg)
 {
 	//SPV node has a key
 	this->publicKey = to_string(rand() % 99999999);
@@ -145,9 +145,9 @@ std::vector<Actions> NodeSPV::getActions(void)
 	std::vector<Actions> actionvector;
 
 	actionvector.push_back(Actions(ActionType::S, "Post Transaction"));
-	actionvector.push_back(Actions(ActionType::R, "Post merkleblock"));
-	actionvector.push_back(Actions(ActionType::S, "Post Filter"));
-	actionvector.push_back(Actions(ActionType::S, "Get Block headers"));
+	//actionvector.push_back(Actions(ActionType::R, "Post merkleblock"));
+	//actionvector.push_back(Actions(ActionType::S, "Post Filter"));
+	//actionvector.push_back(Actions(ActionType::S, "Get Block headers"));
 
 	return actionvector;
 }

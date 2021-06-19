@@ -1,9 +1,9 @@
 #include <iostream>
-//#include "App/App.h"
+#include "App/App.h"
 
 //#define DEMO
-//#define APP
-#define TEST
+#define APP
+//#define TEST
 
 #ifdef APP
 int main()
@@ -77,45 +77,45 @@ std::string hash(std::string msg)
 
 	CryptoPP::SHA256 sha256;
 
-
-	CryptoPP::HashFilter f1(sha256, new CryptoPP::HexEncoder(new CryptoPP::StringSink(s1)));
-
-	CryptoPP::ChannelSwitch cs;
-	cs.AddDefaultRoute(f1);
-
-	CryptoPP::StringSource ss(msg, true /*pumpAll*/, new CryptoPP::Redirector(cs));
-
-
-	//std::cout << "Message: " << msg << std::endl;
-	std::cout << "SHA-256: " << s1 << std::endl;
-
-	return s1;
-}
-
-bool check(std::string msg)
-{
-	int ceroCount = 0;
-	for (int i = 0; i < msg.size() && msg[i] == '0'; i++)
-	{
-		ceroCount++;
-	}
-	
-	if (ceroCount >= 2)
-	{
-		std::cout << "this one is odd!\n\n\n\n\n" << std::endl;
-	}
-
-
-	if (ceroCount >= 5)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-
-}
+//
+//	CryptoPP::HashFilter f1(sha256, new CryptoPP::HexEncoder(new CryptoPP::StringSink(s1)));
+//
+//	CryptoPP::ChannelSwitch cs;
+//	cs.AddDefaultRoute(f1);
+//
+//	CryptoPP::StringSource ss(msg, true /*pumpAll*/, new CryptoPP::Redirector(cs));
+//
+//
+//	//std::cout << "Message: " << msg << std::endl;
+//	std::cout << "SHA-256: " << s1 << std::endl;
+//
+//	return s1;
+//}
+//
+//bool check(std::string msg)
+//{
+//	int ceroCount = 0;
+//	for (int i = 0; i < msg.size() && msg[i] == '0'; i++)
+//	{
+//		ceroCount++;
+//	}
+//	
+//	if (ceroCount >= 2)
+//	{
+//		std::cout << "this one is odd!\n\n\n\n\n" << std::endl;
+//	}
+//
+//
+//	if (ceroCount >= 5)
+//	{
+//		return true;
+//	}
+//	else
+//	{
+//		return false;
+//	}
+//
+//}
 
 #endif //TEST
 
