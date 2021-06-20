@@ -86,8 +86,8 @@ protected:
 	virtual void setConnectedClientID(const boost::asio::ip::tcp::endpoint&);
 
 	/*Client/Server stuff*/
-	Client* client;
-	Server* server;
+	list<Client*> clients;
+	ServerA server;
 	ConnectionState clientState;
 	ConnectionState serverState;
 	int sentMessage;

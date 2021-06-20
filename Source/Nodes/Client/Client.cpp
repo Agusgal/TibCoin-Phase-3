@@ -3,7 +3,7 @@
 
 
 Client::Client(const std::string& ip, const unsigned int ownPort, const unsigned int outPort) : ip(ip), ownPort(ownPort),
-outPort(outPort), multiHandler(nullptr), easyHandler(nullptr) 
+outPort(outPort), multiHandler(nullptr), easyHandler(nullptr), state(ClientState::FREE)
 {
 	if (ip.length() && ownPort && outPort)
 	{
@@ -40,6 +40,7 @@ bool Client::performRequest(void)
 
 				configureClient();
 				first = true;
+				state = ClientState::PERFORMING;
 			}
 
 			if (stillRunning) 
@@ -62,6 +63,8 @@ bool Client::performRequest(void)
 				first = false;
 
 				stillRunning = 1;
+
+				state = ClientState::FINISHED;
 
 				//Parse reply from rawreply
 				try 

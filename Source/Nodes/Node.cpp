@@ -4,32 +4,26 @@ using namespace std;
 
 
 Node::Node(boost::asio::io_context& io_context, const std::string& ip, const unsigned int port, const unsigned int id, const GuiInfo& guiMsg)
-	: ip(ip), server(nullptr), client(nullptr), clientState(ConnectionState::FREE), serverState(ConnectionState::FREE),
-	port(port), id(id), connectedClientId(-1), guiMsg(guiMsg)
+	: ip(ip), clientState(ConnectionState::FREE), serverState(ConnectionState::FREE),
+	port(port), id(id), connectedClientId(-1), server(io_context,
+		std::bind(&Node::getResponse, this, std::placeholders::_1, std::placeholders::_2),
+		std::bind(&Node::postResponse, this, std::placeholders::_1, std::placeholders::_2),
+		std::bind(&Node::errorResponse, this), port), guiMsg(guiMsg)
 {
-	server = new Server(io_context,
-		std::bind(&Node::getResponse, this, placeholders::_1, placeholders::_2),
-		std::bind(&Node::postResponse, this, placeholders::_1, placeholders::_2),
-		std::bind(&Node::errorResponse, this),
-		port);
-
 	//set publicKey
 	//this->publicKey = to_string(rand() % 99999999);
-	std::cout << "Node: " << id << ", key: " << publicKey << std::endl;
 };
 
 
 Node::~Node() 
 {
-	if (server) 
+	for (auto& client: clients) 
 	{
-		delete server;
-		server = nullptr;
-	}
-	if (client)
-	{
-		delete client;
-		client = nullptr;
+		if (client) 
+		{
+			delete client;
+			client = nullptr;
+		}
 	}
 }
 

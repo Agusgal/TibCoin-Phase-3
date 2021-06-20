@@ -5,7 +5,7 @@
 
 const double timeElapsed = 15.0;
 const double minerFee = 10;
-const unsigned int zeroCount = 3;
+const unsigned int zeroCount = 4;
 
 NodeMiner::NodeMiner(boost::asio::io_context& io_context, const std::string& ip, const unsigned int port,
 	const unsigned int identifier, const GuiInfo guiMsg)
@@ -20,34 +20,36 @@ void NodeMiner::perform()
 	
 	mine(true);
 	
-	///*If request has ended...*/
-	//if (clients.size() && clients.front() && !clients.front()->perform()) {
-	//	/*Checks if it was a GETBlock...*/
-	//	if (typeid(*clients.front()) == typeid(GETBlockClient)) {
-	//		/*Saves blocks.*/
-	//		const json& temp = clients.front()->getAnswer();
-	//		if (temp.find("status") != temp.end() && temp["status"]) {
-	//			if (temp.find("result") != temp.end()) {
-	//				for (const auto& block : temp["result"]) {
-	//					blockChain.addBlock(block);
-	//				}
-	//			}
-	//		}
-	//	}
-	//	/*Deletes client.*/
-	//	delete clients.front();
-	//	clients.pop_front();
-	//}
+	
+	
+	if (clients.size() && clients.front() && !clients.front()->performRequest())
+	{
+		if (typeid(*clients.front()) == typeid(GetBlockClient))
+		{
+			const json& temp = clients.front()->getAnswer();
+			if (temp.find("status") != temp.end() && temp["status"]) 
+			{
+				if (temp.find("result") != temp.end()) 
+				{
+					for (const auto& block : temp["result"]) 
+					{
+						blockChain.addBlock(block);
+					}
+				}
+			}
+		}
+		delete clients.front();
+		clients.pop_front();
+	}
 
-	NodeFull::perform();
+	
 }
 
 void NodeMiner::mine(bool real) 
 {
 	json block;
 
-	//might change
-	//guiMsg.setMsg("Node " + std::to_string(id) + " is mining a block.");
+	
 
 	for (const auto& trans: transactions) 
 	{
@@ -82,7 +84,7 @@ void NodeMiner::mine(bool real)
 
 	if (completed) 
 	{
-		guiMsg.setMsg("Node " + std::to_string(id) + " has mined a block.\n");
+		guiMsg.setMsg("\nNode " + std::to_string(id) + " has mined a block.");
 		
 		//add block to blockchain
 		blockChain.addBlock(block);
@@ -96,6 +98,7 @@ void NodeMiner::mine(bool real)
 			//for every neighbor if it is a full node the we have to send the 
 			if (!neighbor.second.filter.length()) 
 			{
+				guiMsg.setMsg("\nNode " + std::to_string(id) + " is performing a client request. (NodeMiner.cpp)");
 				NodeFull::postBlock(neighbor.first, blockChain.getBlockQuantity() - 1);
 			}
 		}

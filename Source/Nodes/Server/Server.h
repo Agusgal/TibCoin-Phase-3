@@ -16,6 +16,18 @@ using namespace std;
 
 #define MAXSIZE 999999
 
+
+const enum class ServerState : unsigned int 
+{
+	FREE,
+	PERFORMING,
+	OK,
+	FAIL,
+	FINISHED
+};
+
+
+
 //Bind
 namespace {
 	using Response = function<const string(const string&, const boost::asio::ip::tcp::endpoint&)>;
@@ -24,11 +36,11 @@ namespace {
 
 
 
-class Server
+class ServerA
 {
 public:
-	Server(boost::asio::io_context&, const Response&, const Response&, const errorResp&, unsigned int);
-	virtual ~Server();
+	ServerA(boost::asio::io_context&, const Response&, const Response&, const errorResp&, unsigned int);
+	virtual ~ServerA();
 
 protected:
 	void newConnection(void);
@@ -41,19 +53,19 @@ protected:
 	};
 
 	struct Connection {
-		Connection(boost::asio::io_context& io_context) : socket(io_context) {}
+		Connection(boost::asio::io_context& io_context) : socket(io_context), state(ServerState::FREE){}
 		boost::asio::ip::tcp::socket socket;
 		char reader[MAXSIZE];
 		std::string response;
-		std::list<Connection>::iterator pos;
+		ServerState state;
 	};
 
 
 	/*Connection methods.*/
-	void asyncConnection(Connection&);
-	void closeConnection(Connection&);
+	void asyncConnection(Connection*);
+	void closeConnection(Connection*);
 
-	void answer(Connection&, const std::string&);
+	void answer(Connection*, const std::string&);
 	
 	Response getResponse;
 	Response postResponse;
@@ -61,9 +73,9 @@ protected:
 
 
 	/*Callbacks*/
-	void validateInput(Connection&, const boost::system::error_code& error, size_t bytes);
-	void connectCallback(Connection&, const boost::system::error_code& error);
-	void msgCallback(Connection&, const boost::system::error_code& error, size_t bytes_sent);
+	void validateInput(Connection*, const boost::system::error_code& error, size_t bytes);
+	void connectCallback(Connection*, const boost::system::error_code& error);
+	void msgCallback(Connection*, const boost::system::error_code& error, size_t bytes_sent);
 
 
 

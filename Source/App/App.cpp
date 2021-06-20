@@ -98,43 +98,6 @@ const Events App::eventGenerator()
 { 
 	io_context.poll();
 	
-	for (const auto& node : nodes) 
-	{
-		switch (node->getClientState()) 
-		{
-		case ConnectionState::PERFORMING:
-			gui->updateComMsg("\nNode " + std::to_string(node->getId()) + " is performing a client request.");
-			break;
-		case ConnectionState::FINISHED:
-			gui->updateComMsg("\nNode " + std::to_string(node->getId()) + " finished the request.");
-			break;
-		default:
-			break;
-		}
-
-		switch (node->getServerState()) 
-		{
-			int client_reception;
-		case ConnectionState::OK:
-			if ((client_reception = node->getClientPort()) != -1) 
-			{
-				gui->updateComMsg("\nNode " + std::to_string(node->getId()) + " is answering a request from node " + std::to_string(client_reception) + ". Data was OK");
-			}
-			break;
-		case ConnectionState::FAILED:
-			if ((client_reception = node->getClientPort()) != -1) {
-				gui->updateComMsg("\nNode " + std::to_string(node->getId()) + " is answering a request from node " + std::to_string(client_reception) + ". Data was NOT OK");
-			}
-			break;
-		case ConnectionState::FINISHED:
-			gui->updateComMsg("\nNode " + std::to_string(node->getId()) + " closed the connection");
-			break;
-		default:
-			break;
-		}
-	}
-	
-	
 	return gui->checkForEvent();
 }
 

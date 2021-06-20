@@ -28,42 +28,45 @@ NodeFull::NodeFull(boost::asio::io_context& io_context, const std::string& ip,
 //get block request
 void NodeFull::getBlocks(const unsigned int id, const std::string& blockID, const unsigned int count) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	/*if (clientState == ConnectionState::FREE && !client) 
+	{*/
+	if (neighbors.find(id) != neighbors.end() && count) 
 	{
-		if (neighbors.find(id) != neighbors.end() && count) 
-		{
-			client = new GetBlockClient(neighbors[id].ip, port + 1, neighbors[id].port, blockID, count);
-			clientState = ConnectionState::PERFORMING;
-		}
+		guiMsg.setMsg("\nNode " + std::to_string(id) + " is performing a client request. (NodeFull.cpp)");
+		clients.push_back(new GetBlockClient(neighbors[id].ip, port + 1, neighbors[id].port, blockID, count));
+		//clientState = ConnectionState::PERFORMING;
 	}
+	//}
 }
 
 
 //Post block request
 void NodeFull::postBlock(const unsigned int id, const unsigned int index) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	/*if (clientState == ConnectionState::FREE && !client) 
+	{*/
+	if (neighbors.find(id) != neighbors.end()) 
 	{
-		if (neighbors.find(id) != neighbors.end()) 
-		{
-			client = new BlockClient(neighbors[id].ip, port + 1, neighbors[id].port, blockChain.getBlock(index));
-			clientState = ConnectionState::PERFORMING;
-		}
+		//guiMsg.setMsg("\nNode " + std::to_string(id) + " is performing a client request. (NodeFull.cpp)");
+		clients.push_back(new BlockClient(neighbors[id].ip, port + 1, neighbors[id].port, blockChain.getBlock(index)));
+		//clientState = ConnectionState::PERFORMING;
 	}
+	/*}*/
 }
 
 //Post merkleblock request
 void NodeFull::postMerkleBlock(const unsigned int id, const std::string& blockID, const std::string& transID) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	/*if (clientState == ConnectionState::FREE && !client) 
+	{*/
+	if (neighbors.find(id) != neighbors.end()) 
 	{
-		if (neighbors.find(id) != neighbors.end()) 
-		{
-			auto temp = getMerkleBlock(blockID, transID);
-			client = new MerkleClient(neighbors[id].ip, port + 1, neighbors[id].port, temp);
-			clientState = ConnectionState::PERFORMING;
-		}
+		auto temp = getMerkleBlock(blockID, transID);
+		guiMsg.setMsg("\nNode " + std::to_string(id) + " is performing a client request. (NodeFull.cpp)");
+		clients.push_back(new MerkleClient(neighbors[id].ip, port + 1, neighbors[id].port, temp));
+		//clientState = ConnectionState::PERFORMING;
 	}
+	//}
 }
 
 //Get block request
@@ -82,27 +85,29 @@ const json& NodeFull::getBlock(const std::string& blockID)
 
 void NodeFull::transaction(const unsigned int id, const std::string& wallet, const unsigned int amount) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	/*if (clientState == ConnectionState::FREE && !client) 
+	{*/
+	if (neighbors.find(id) != neighbors.end()) 
 	{
-		if (neighbors.find(id) != neighbors.end()) 
-		{
-			json var;
+		json var;
+		//updtae with data from node TODo
 
-			var["txid"] = "ABCDE123";
-			var["nTxin"] = 0;
-			var["nTxout"] = 1;
-			var["vin"] = json();
+		var["txid"] = "ABCDE123";
+		var["nTxin"] = 0;
+		var["nTxout"] = 1;
+		var["vin"] = json();
 
-			json vout;
-			vout["amount"] = amount;
-			vout["publicid"] = wallet;
+		json vout;
+		vout["amount"] = amount;
+		vout["publicid"] = wallet;
 
-			var["vout"] = vout;
+		var["vout"] = vout;
 
-			client = new TransactionClient(neighbors[id].ip, port + 1, neighbors[id].port, var);
-			clientState = ConnectionState::PERFORMING;
-		}
+		guiMsg.setMsg("\nNode " + std::to_string(id) + " is performing a client request. (NodeFull.cpp)");
+		clients.push_back(new TransactionClient(neighbors[id].ip, port + 1, neighbors[id].port, var));
+		//clientState = ConnectionState::PERFORMING;
 	}
+	//}
 }
 
 
@@ -145,11 +150,15 @@ NodeFull::~NodeFull() {}
 //Get callback (Server)
 const std::string NodeFull::getResponse(const std::string& request, const boost::asio::ip::tcp::endpoint& nodeInfo) 
 {
-	json result;
 	setConnectedClientID(nodeInfo);
+
+	guiMsg.setMsg("\nNode " + std::to_string(id) + " is answering a request from "
+		+ (connectedClientId == -1 ? "an unknown node." : "node " + std::to_string(connectedClientId)));
+
+	json result;
 	result["status"] = true;
 	int block;
-	serverState = ConnectionState::FAILED;
+	//serverState = ConnectionState::FAILED;
 
 
 	if ((block = request.find(BLOCKSGET)) || request.find(HEADERGET)) 
@@ -165,7 +174,18 @@ const std::string NodeFull::getResponse(const std::string& request, const boost:
 
 			int cont = std::stoi(request.substr(posCount + 6, request.find("HTTP") - posCount - 6));
 
-			int absoluteIndex = blockChain.getBlockIndex(id);
+			int absoluteIndex;
+			if (id == "0")
+			{
+				absoluteIndex = 0;
+				//TODO if hashed failed????
+			}
+			else
+			{
+				absoluteIndex = blockChain.getBlockIndex(id);
+			}
+
+
 
 			if (!(++absoluteIndex))
 			{
@@ -174,6 +194,11 @@ const std::string NodeFull::getResponse(const std::string& request, const boost:
 			}
 			else 
 			{
+				if (!cont)
+				{
+					cont = blockChain.getBlockQuantity();
+				}
+				
 				while (absoluteIndex < blockChain.getBlockQuantity() && cont)
 				{
 					if (block != std::string::npos) 
@@ -185,10 +210,15 @@ const std::string NodeFull::getResponse(const std::string& request, const boost:
 						response.push_back(blockChain.getHeader(absoluteIndex));
 					}
 					cont--;
-					serverState = ConnectionState::OK;
+					absoluteIndex++;
+					//serverState = ConnectionState::OK;
 				}
 
 				result["result"] = response;
+
+				//cheching only
+				std::string res = response.dump();
+				//std::string realRes = blockChain.get
 			}
 		}
 		else 
@@ -212,9 +242,9 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 	setConnectedClientID(nodeInfo);
 
 
-	guiMsg.setMsg("Node " + std::to_string(id) + " is answering a request from " + std::to_string(connectedClientId) + "\n");
+	guiMsg.setMsg("\nNode " + std::to_string(id) + " is answering a request from " + std::to_string(connectedClientId));
 
-	serverState = ConnectionState::FAILED;
+	//serverState = ConnectionState::FAILED;
 
 	json result;
 	result["status"] = false;
@@ -230,6 +260,7 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 			json blockData = json::parse(request.substr(data + 5, content - data - 5));
 			if (validateBlock(blockData))
 			{
+				guiMsg.setMsg("\nNode " + std::to_string(id) + " validated the block sent by:  " + std::to_string(connectedClientId) + " and it was correct!");
 				blockChain.addBlock(blockData);
 			}
 			/*TODO*/
@@ -247,7 +278,6 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 			//Clean transaction queue because block is already mined
 			transactions = json();
 		}
-		serverState = ConnectionState::OK;
 	}
 	else if (request.find(TRANSPOST) != std::string::npos) 
 	{
@@ -271,7 +301,6 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 				result["status"] = true;
 			}
 		}
-		serverState = ConnectionState::OK;
 	}
 	else if (request.find(FILTERPOST) != std::string::npos) 
 	{
@@ -289,7 +318,7 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 				}
 			}
 		}
-		serverState = ConnectionState::OK;
+		//serverState = ConnectionState::OK;
 	}
 
 	return headerFormat(result.dump());
@@ -298,25 +327,22 @@ const std::string NodeFull::postResponse(const std::string& request, const boost
 
 void NodeFull::perform() 
 {
-	if (client) 
+	if (clients.size() && clients.front() && !clients.front()->performRequest()) 
 	{
-		if (!client->performRequest())
+		if (typeid(*clients.front()) == typeid(GetBlockClient)) 
 		{
-			if (typeid(*client) == typeid(GetBlockClient)) 
+			const json& temp = clients.front()->getAnswer();
+			if (temp["status"]) 
 			{
-				const json& temp = client->getAnswer();
-				if (temp["status"]) 
+				for (const auto& block : temp["result"]) 
 				{
-					for (const auto& block : temp["result"]) 
-					{
-						blockChain.addBlock(block);
-					}
+					blockChain.addBlock(block);
 				}
 			}
-			delete client;
-			client = nullptr;
-			clientState = ConnectionState::FINISHED;
 		}
+		delete clients.front();
+		clients.pop_front();
+		clientState = ConnectionState::FINISHED;
 	}
 }
 
@@ -324,12 +350,7 @@ std::vector <Actions> NodeFull::getActions(void)
 {
 	std::vector<Actions> actionvector;
 
-	//actionvector.push_back(Actions(ActionType::SR, "Post Block"));
 	actionvector.push_back(Actions(ActionType::SR, "Post Transaction"));
-	//actionvector.push_back(Actions(ActionType::S, "Post merkleblock"));
-	//actionvector.push_back(Actions(ActionType::R, "Post Filter"));
-	//actionvector.push_back(Actions(ActionType::R, "Get Block headers"));
-	//actionvector.push_back(Actions(ActionType::SR, "Get Blocks"));
 	actionvector.push_back(Actions(ActionType::SR, "Post fake transaction"));
 	actionvector.push_back(Actions(ActionType::SR, "Post fake block"));
 
@@ -396,7 +417,7 @@ bool NodeFull::validateTransaction(const json& transaction, bool checked)
 
 	if (!result)
 	{
-		guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a transaction.\n");
+		guiMsg.setMsg("\nNode " + std::to_string(id) + " is rejecting a transaction.");
 	}
 
 	return result;
@@ -433,7 +454,7 @@ bool NodeFull::validateBlock(const json& block)
 		}
 		else
 		{
-			guiMsg.setMsg("Node " + std::to_string(id) + " is rejecting a block.\n");
+			guiMsg.setMsg("\nNode " + std::to_string(id) + " is rejecting a block.");
 		}
 	}
 

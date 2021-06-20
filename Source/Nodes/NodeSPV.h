@@ -30,5 +30,7 @@ private:
 	virtual const std::string postResponse(const std::string&, const boost::asio::ip::tcp::endpoint&);
 
 	//SPV Node has only headers
-	nlohmann::json headers;
+	std::map<std::string, json> headers;
+
+	json merkles;
 };

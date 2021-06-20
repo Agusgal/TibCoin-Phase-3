@@ -15,7 +15,7 @@ namespace data
 
 /*Server constructor. Initializes io_context, acceptor and socket.
 Calls asyncConnection to accept connections.*/
-Server::Server(boost::asio::io_context& io_context_, const Response& GET,
+ServerA::ServerA(boost::asio::io_context& io_context_, const Response& GET,
 	const Response& POST, const errorResp& ERROR_RESP, unsigned int port) : host(data::autoIP), port(port), io_context(io_context_),
 	acceptor(io_context_, tcp::endpoint(tcp::v4(), port)), getResponse(GET), postResponse(POST), errorResponse(ERROR_RESP)
 {
@@ -24,11 +24,11 @@ Server::Server(boost::asio::io_context& io_context_, const Response& GET,
 
 
 /*If there's a new neighbor, it sets a new socket.*/
-void Server::newConnection() 
+void ServerA::newConnection()
 {
 	//Pushes new socket ---> implementation should be expandable in the future
 	sockets.push_back(Connection(io_context));
-	sockets.back().pos = std::prev(sockets.end());
+	
 
 	if (sockets.back().socket.is_open()) 
 	{
@@ -40,12 +40,12 @@ void Server::newConnection()
 		sockets.back().reader[i] = NULL;
 	}
 
-	asyncConnection(sockets.back());
+	asyncConnection(&sockets.back());
 }
 
 
 
-Server::~Server() 
+ServerA::~ServerA()
 {
 	for (auto& connector: sockets) 
 	{
@@ -63,37 +63,53 @@ Server::~Server()
 }
 
 
-void Server::asyncConnection(Connection& connector) 
+void ServerA::asyncConnection(Connection* connector)
 {
 	if (acceptor.is_open()) 
 	{
-		if (!(connector).socket.is_open()) 
+		if (!connector->socket.is_open()) 
 		{
 			acceptor.async_accept(
-				(connector).socket, boost::bind(&Server::connectCallback,
-					this, boost::ref(connector), boost::asio::placeholders::error)
+				connector->socket, boost::bind(&ServerA::connectCallback,
+					this, connector, boost::asio::placeholders::error)
 			);
 		}
 	}
 }
 
 
-void Server::closeConnection(Connection& connector) 
+void ServerA::closeConnection(Connection* connector)
 {
-	(connector).socket.shutdown(tcp::socket::shutdown_both);
-	(connector).socket.close();
+	connector->socket.shutdown(tcp::socket::shutdown_both);
+	connector->socket.close();
 
 	//Deletes socket if more than 1
 	if (sockets.size() > 1)
 	{
-		sockets.erase(connector.pos);
+		auto ptr = sockets.begin();
+		for (auto i = sockets.begin(); i != sockets.end(); i++) 
+		{
+			if (&(*i) == connector)
+			{
+				ptr = i;
+			}
+		}
+
+		/*It clears the reader and reconnects.*/
+		for (unsigned int i = 0; i < MAXSIZE; i++)
+		{
+			connector->reader[i] = NULL;
+		}
+
+		sockets.erase(ptr);
+		newConnection();
 	}
 	else 
 	{
 		//Clear and reconnect
 		for (unsigned int i = 0; i < MAXSIZE; i++)
 		{
-			(connector).reader[i] = NULL;
+			connector->reader[i] = NULL;
 		}
 		asyncConnection(connector);
 	}
@@ -101,11 +117,11 @@ void Server::closeConnection(Connection& connector)
 
 
 //Get request input validation
-void Server::validateInput(Connection& connector, const boost::system::error_code& error, size_t bytes) 
+void ServerA::validateInput(Connection* connector, const boost::system::error_code& error, size_t bytes)
 {
 	if (!error) 
 	{
-		std::string message = (connector).reader;
+		std::string message = (*connector).reader;
 		std::cout << "Server received: " + message << std::endl;
 
 		//HTTP protocol validation
@@ -141,19 +157,21 @@ void Server::validateInput(Connection& connector, const boost::system::error_cod
 
 
 //When conencted execute this callback
-void Server::connectCallback(Connection& connector, const boost::system::error_code& error) 
+void ServerA::connectCallback(Connection* connector, const boost::system::error_code& error)
 {
 	newConnection();
+
+	connector->state = ServerState::PERFORMING;
 
 	if (!error) 
 	{
 		//Sets socket to read request.
-		connector.socket.async_read_some(
-			boost::asio::buffer((connector).reader, MAXSIZE),
+		connector->socket.async_read_some(
+			boost::asio::buffer(connector->reader, MAXSIZE),
 			boost::bind
 			(
-				&Server::validateInput,
-				this, boost::ref(connector), boost::asio::placeholders::error,
+				&ServerA::validateInput,
+				this, connector, boost::asio::placeholders::error,
 				boost::asio::placeholders::bytes_transferred
 			)
 		);
@@ -166,44 +184,48 @@ void Server::connectCallback(Connection& connector, const boost::system::error_c
 
 
 //When message is sent to client use this callback
-void Server::msgCallback(Connection& connector, const boost::system::error_code& error, size_t bytes_sent)
+void ServerA::msgCallback(Connection* connector, const boost::system::error_code& error, size_t bytes_sent)
 {
 	if (error)
 	{
 		std::cout << "Failed to respond. Error: " << error.message() << std::endl;
 	}
+	
+	connector->state = ServerState::FINISHED;
 	closeConnection(connector);
+
+	//connector->state = ServerState::FINISHED;
 }
 
 //Responds to input.
-void Server::answer(Connection& connector, const std::string& message) 
+void ServerA::answer(Connection* connector, const std::string& message)
 {
 	//Depending on requestType a response is given with binded functions
 	switch (type) 
 	{
 	case ConnectionTypes::POST:
-		(connector).response = postResponse(message, connector.socket.remote_endpoint());
+		(connector)->response = postResponse(message, connector->socket.remote_endpoint());
 		break;
 	case ConnectionTypes::GET:
-		(connector).response = getResponse(message, connector.socket.remote_endpoint());
+		(connector)->response = getResponse(message, connector->socket.remote_endpoint());
 		break;
 	case ConnectionTypes::NONE:
-		(connector).response = errorResponse();
+		(connector)->response = errorResponse();
 		break;
 	default:
 		break;
 	}
 
-	(connector).response += "\r\n\r\n";
+	connector->response += "\r\n\r\n";
 
 	//Send to client
-	(connector).socket.async_write_some
+	(connector)->socket.async_write_some
 	(
-		boost::asio::buffer((connector).response),
+		boost::asio::buffer(connector->response),
 		boost::bind
 		(
-			&Server::msgCallback,
-			this, boost::ref(connector),
+			&ServerA::msgCallback,
+			this, connector,
 			boost::asio::placeholders::error,
 			boost::asio::placeholders::bytes_transferred
 		)

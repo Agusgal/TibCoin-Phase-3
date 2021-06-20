@@ -20,7 +20,10 @@ NodeSPV::NodeSPV(boost::asio::io_context& io_context, const std::string& ip,
 const std::string NodeSPV::getResponse(const std::string& request, const boost::asio::ip::tcp::endpoint& nodeInfo) 
 {
 	setConnectedClientID(nodeInfo);
-	serverState = ConnectionState::FAILED;
+
+	guiMsg.setMsg("Node " + std::to_string(id) + " is answering a request from "
+		+ (connectedClientId == -1 ? "an unknown node." : "node " + std::to_string(connectedClientId)));
+
 
 	json result;
 	result["status"] = false;
@@ -33,7 +36,10 @@ const std::string NodeSPV::getResponse(const std::string& request, const boost::
 const std::string NodeSPV::postResponse(const std::string& request, const boost::asio::ip::tcp::endpoint& nodeInfo)
 {
 	setConnectedClientID(nodeInfo);
-	serverState = ConnectionState::FAILED;
+
+	guiMsg.setMsg("Node " + std::to_string(id) + " is answering a request from "
+		+ (connectedClientId == -1 ? "an unknown node." : "node " + std::to_string(connectedClientId)));
+
 	json result;
 	result["status"] = true;
 	result["result"] = NULL;
@@ -48,7 +54,15 @@ const std::string NodeSPV::postResponse(const std::string& request, const boost:
 		}
 		else 
 		{
-			serverState = ConnectionState::OK;
+			//merklepost bullshit
+			
+			/*json merkle = json::parse(request.substr(data + 5, content - data - 5));
+
+			if (!validateMerkleBlock(merkle)) {
+				merkles.push_back(merkle);
+
+				perform(ConnectionType::GETHEADER, (*std::begin(neighbors)).first, "0", NULL);
+			}*/
 		}
 	}
 	else 
@@ -65,78 +79,78 @@ NodeSPV::~NodeSPV() {}
 
 void NodeSPV::postFilter(const unsigned int id, const std::string& key) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	
+	if (neighbors.find(id) != neighbors.end()) 
 	{
-		if (neighbors.find(id) != neighbors.end()) 
-		{
-			json var;
+		json var;
 
-			var["key"] = key;
+		var["key"] = key;
 
-			client = new FilterClient(neighbors[id].ip, port + 1, neighbors[id].port, var);
-			clientState = ConnectionState::PERFORMING;
-		}
+		clients.push_back(new FilterClient(neighbors[id].ip, port + 1, neighbors[id].port, var));
+		clientState = ConnectionState::PERFORMING;
 	}
+	
 };
 
 void NodeSPV::transaction(const unsigned int id, const std::string& wallet, const unsigned int amount) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	
+	if (neighbors.find(id) != neighbors.end()) 
 	{
-		if (neighbors.find(id) != neighbors.end()) 
-		{
-			json tempData;
+		json tempData;
 
-			tempData["txid"] = "ABCDE123";
-			tempData["nTxin"] = 0;
-			tempData["nTxout"] = 1;
-			tempData["vin"] = json();
+		tempData["txid"] = "ABCDE123";
+		tempData["nTxin"] = 0;
+		tempData["nTxout"] = 1;
+		tempData["vin"] = json();
 
-			json vout;
-			vout["amount"] = amount;
-			vout["publicid"] = wallet;
+		json vout;
+		vout["amount"] = amount;
+		vout["publicid"] = wallet;
 
-			tempData["vout"] = vout;
+		tempData["vout"] = vout;
 
-			client = new TransactionClient(neighbors[id].ip, port + 1, neighbors[id].port, tempData);
-			clientState = ConnectionState::PERFORMING;
-		}
+		clients.push_back(new TransactionClient(neighbors[id].ip, port + 1, neighbors[id].port, tempData));
+		clientState = ConnectionState::PERFORMING;
 	}
+	
 }
 
 void NodeSPV::getBlockHeaders(const unsigned int id, const std::string& blockID, const unsigned int count) 
 {
-	if (clientState == ConnectionState::FREE && !client) 
+	
+	if (neighbors.find(id) != neighbors.end() && count) 
 	{
-		if (neighbors.find(id) != neighbors.end() && count) 
-		{
-			client = new GetHeaderClient(neighbors[id].ip, port + 1, neighbors[id].port, blockID, count);
-			clientState = ConnectionState::PERFORMING;
-		}
+		clients.push_back(new GetHeaderClient(neighbors[id].ip, port + 1, neighbors[id].port, blockID, count));
+		clientState = ConnectionState::PERFORMING;
 	}
+	
 };
 
 
 void NodeSPV::perform()
 {
-	if (client) 
+	if (clients.size() && clients.front() && !clients.front()->performRequest())
 	{
-		if (!client->performRequest()) 
+		if (typeid(*clients.front()) == typeid(GetHeaderClient))
 		{
-			if (typeid(*client) == typeid(GetHeaderClient)) 
+			const json& temp = clients.front()->getAnswer();
+			if (temp.find("status") != temp.end() && temp["status"])
 			{
-				const json& temp = client->getAnswer();
-				if (temp["status"]) 
+				if (temp.find("result") != temp.end())
 				{
+					std::string res = temp["result"].dump();
 					for (const auto& header : temp["result"])
-						headers.push_back(header);
+					{
+						headers[header["blockid"]] = header;
+					}
 				}
 			}
-			delete client;
-			client = nullptr;
-			clientState = ConnectionState::FINISHED;
 		}
+		delete clients.front();
+		clients.pop_front();
 	}
+	
 }
 
 
